@@ -1,0 +1,217 @@
+---
+title: 'Stats 401: Analysis'
+author: "Matt Suba and Matthew Varela"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+
+```{r load_packages, warning = FALSE, message = FALSE}
+# use this code chunk to load any necessary packages
+library(ggplot2)
+library(broom)       # tidy() / glance()
+library(car)         # vif()
+```
+
+
+```{r read_data}
+# use this code chunk to read in your data set
+# note: you will need to move your data set into the "stats401_final_project" folder in order for this code chunk to run properly
+fifa <- read.csv("fifa_cleaned.csv") 
+```
+
+
+\newpage
+
+## Figure 1
+
+```{r}
+# I have provided you with 15 blank code chunks - add and delete these, as necessary
+
+# You are welcome to include multiple plots and pieces of output within a single "Figure"
+
+fifa$preferred_foot <- as.factor(fifa$preferred_foot)
+lm_init <- lm(wage_eur ~ shooting + pace + attacking_crossing + preferred_foot,
+              data = fifa)
+
+# model summary
+summary(lm_init)
+
+plot(fitted(lm_init), residuals(lm_init),
+     main = "Figure 1a: Residuals vs. Fitted (Initial Model)",
+     xlab = "Fitted Values",
+     ylab = "Residuals")
+
+# 1b) Normal Q–Q
+qqnorm(residuals(lm_init),
+       main = "Figure 1b: Normal Q–Q (Initial Model)")
+qqline(residuals(lm_init))
+
+```
+\newpage
+
+## Figure 2
+
+```{r}
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))   # 1-row, 2-column layout
+
+## Histogram of raw weekly wages (EUR)
+hist(fifa$wage_eur,
+     breaks = 60,
+     main   = "Raw Weekly Wage (EUR)",
+     xlab   = "Weekly wage (EUR)",
+     ylab   = "Frequency",
+     col    = "lightgray")
+
+## Histogram of log-transformed weekly wages
+hist(log(fifa$wage_eur),
+     breaks = 60,
+     main   = "Log(Weekly Wage)",
+     xlab   = "log(Weekly wage)",
+     ylab   = "Frequency",
+     col    = "lightgray")
+
+par(mfrow = c(1, 1))                         # reset layout
+
+```
+
+
+\newpage
+
+## Figure 3
+
+```{r}
+
+lm_log  <- lm(log(wage_eur) ~ shooting + pace + attacking_crossing + preferred_foot,
+              data = fifa)
+summary(lm_log)
+
+plot(fitted(lm_log), residuals(lm_log),
+     main = "Figure 3a: Residuals vs. Fitted (Log–Response Model)",
+     xlab = "Fitted Values (log scale)",
+     ylab = "Residuals")
+
+# 3b) Normal Q–Q
+qqnorm(residuals(lm_log),
+       main = "Figure 3b: Normal Q–Q (Log–Response Model)")
+qqline(residuals(lm_log))
+
+```
+
+
+\newpage
+
+## Figure 4
+
+```{r}
+lm_int <- lm(log(wage_eur) ~ shooting + pace + attacking_crossing*preferred_foot,
+             data = fifa)
+summary(lm_int)
+
+# visualise the interaction
+ggplot(fifa,
+       aes(attacking_crossing, log(wage_eur), colour = preferred_foot)) +
+  geom_point(alpha = .35, size = 1.2) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Interaction: Attacking Crossing × Preferred Foot",
+       x = "Attacking Crossing rating",
+       y = "log(Weekly Wage)",
+       colour = "Preferred Foot")
+
+```
+
+
+\newpage
+
+## Figure 5
+
+```{r}
+# add age and passing as candidate predictors
+lm_full <- lm(log(wage_eur) ~ shooting + pace + attacking_crossing*preferred_foot +
+                          age + passing + dribbling,
+              data = fifa)
+summary(lm_full)
+
+# diagnostics for the extended model
+plot(fitted(lm_full), residuals(lm_full),
+     main = "Figure 5a: Residuals vs. Fitted (Extended Model)",
+     xlab = "Fitted Values (log scale)",
+     ylab = "Residuals")
+
+# 5b) Normal Q–Q
+qqnorm(residuals(lm_full),
+       main = "Figure 5b: Normal Q–Q (Extended Model)")
+qqline(residuals(lm_full))
+
+```
+
+
+
+\newpage
+
+## Figure 6
+
+```{r}
+# helper to compute RMSE without external packages -----------------------
+rmse <- function(actual, pred) sqrt(mean((actual - pred)^2))
+
+# RMSE for the three models (initial, log‑response, extended) ------------
+rmse_init <- sqrt(mean(residuals(lm_init)^2))
+
+rmse_log  <- rmse(fifa$wage_eur, exp(fitted(lm_log)))     # back‑transform
+rmse_full <- rmse(fifa$wage_eur, exp(fitted(lm_full)))
+
+# assemble a data frame with base R --------------------------------------
+fit_table <- data.frame(
+  Model   = c("Initial (raw wage)",
+              "Log‑response",
+              "Extended + dribbling and passing"),
+  RMSE_EUR = round(c(rmse_init, rmse_log, rmse_full), 1),
+  R2_adj   = round(c(summary(lm_init)$adj.r.squared,
+                     summary(lm_log)$adj.r.squared,
+                     summary(lm_full)$adj.r.squared), 3)
+)
+
+fit_table
+
+```
+
+
+\newpage
+
+## Figure 7
+
+```{r}
+# drop the categorical & interaction before VIF
+lm_vif <- lm(log(wage_eur) ~ shooting + pace + attacking_crossing +
+                         age + passing + dribbling, data = fifa)
+
+car::vif(lm_vif)
+
+```
+
+\newpage
+
+## Figure 8
+
+```{r}
+# Fit the two competing models
+M1 <- lm(log(wage_eur) ~ shooting + pace + attacking_crossing + preferred_foot, data = fifa)
+M2 <- lm(log(wage_eur) ~ shooting + pace + attacking_crossing * preferred_foot, data = fifa)
+
+# ANOVA (nested F-test)
+anova_result <- anova(M1, M2)
+print(anova_result)
+
+```
+
+
+
+\newpage
