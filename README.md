@@ -1,6 +1,6 @@
  Money Talks — Predicting FIFA 23 Player Wages ⚽💶
 
-Applied-stats project (STATS 401, Univ. of Michigan).
+Applied Statistical Methods II final project (STATS 401, University of Michigan).
 
 ## Problem
 Estimate weekly wages using publicly available FIFA 23 ratings to identify undervalued talent.
