@@ -1,4 +1,4 @@
- Money Talks — Predicting FIFA 23 Player Wages ⚽💶
+## Money Talks — Predicting FIFA 23 Player Wages ⚽💶
 
 Applied Statistical Methods II final project (STATS 401, University of Michigan).
 
